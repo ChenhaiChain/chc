@@ -1,0 +1,11 @@
+{
+  "Address": "AccountId",
+  "LookupSource": "AccountId",
+  "Resource": {
+    "id": "Bytes",
+    "price": "u128",
+    "min_output_kg": "u16",
+    "freeze_at": "u64",
+    "info": "Bytes"
+  }
+}

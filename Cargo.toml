@@ -1,0 +1,47 @@
+[package]
+name = "chc-node"
+version = "0.1.2"
+edition = "2018"
+authors = ['CHC Developers']
+license = 'Unlicense'
+description = 'Substrate node with GRANDPA and BABE to run CHC Runtime'
+
+[[bin]]
+name = "chc-node"
+path = "src/main.rs"
+
+[dependencies]
+derive_more = "0.15.0"
+futures = "0.3.1"
+structopt = "0.3.8"
+futures01 = { package = "futures", version = "0.1.29" }
+ctrlc = { version = "3.1.3", features = ["termination"] }
+log = "0.4.8"
+tokio = "0.1.22"
+exit-future = "0.2.0"
+parking_lot = "0.9.0"
+trie-root = "0.15.2"
+sp-io = '2.0.0-alpha.8'
+sc-cli = '0.8.0-alpha.8'
+sc-client-api = '2.0.0-alpha.8'
+sc-consensus = '0.8.0-alpha.8'
+sp-core = '2.0.0-alpha.8'
+sp-runtime = '2.0.0-alpha.8'
+sc-executor = '0.8.0-alpha.8'
+sc-service = '0.8.0-alpha.8'
+sp-inherents = '2.0.0-alpha.8'
+sc-transaction-pool = '2.0.0-alpha.8'
+sp-transaction-pool = '2.0.0-alpha.8'
+sc-network = '0.8.0-alpha.8'
+sc-consensus-babe = '0.8.0-alpha.8'
+sp-consensus-babe = '0.8.0-alpha.8'
+sc-finality-grandpa = '0.8.0-alpha.8'
+sp-finality-grandpa = '2.0.0-alpha.8'
+sc-basic-authorship = '0.8.0-alpha.8'
+sp-consensus = '0.8.0-alpha.8'
+
+runtime = { package = "chc-runtime", path = "./runtime" }
+
+[build-dependencies]
+vergen = "3.0.4"
+substrate-build-script-utils = '2.0.0-alpha.8'
