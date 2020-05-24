@@ -3,7 +3,7 @@
 use frame_support::codec::{Decode, Encode};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
-    storage::{StorageDoubleMap, StorageMap},
+    storage::StorageDoubleMap,
     traits::{Currency, ExistenceRequirement::AllowDeath},
 };
 use frame_system::{self as system, ensure_signed};
@@ -13,8 +13,8 @@ use sp_std::{
 };
 
 pub trait Trait: system::Trait + timestamp::Trait + balances::Trait {
-    /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
     // type Currency: Currency<Self::AccountId>;
 }
 // type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
@@ -71,7 +71,6 @@ decl_event!(
     pub enum Event<T>
     where
         AccountId = <T as system::Trait>::AccountId,
-        // Hash = <T as system::Trait>::Hash,
     {
         ResourceOnline(AccountId, ResourceId),
         ResourceAdopted(AccountId, ResourceId, AccountId),
@@ -86,6 +85,7 @@ decl_error! {
         ResourceNotExist,
         ResourceAdopted,
         ResourceFreezed,
+        IllegalAdopter,
         IllegalTimestamp,
     }
 }
@@ -107,10 +107,7 @@ decl_module! {
             let publisher = ensure_signed(origin)?;
             ensure!(!Resources::<T>::contains_key(&publisher, &id), Error::<T>::ResourceAlreadyExist);
             let now = <timestamp::Module<T>>::get();
-
-            // TODO
-            // let time_u64 = TryInto::<u64>::try_into(now).map_err(|_| "timestamp overflow")?;
-            // ensure!(time_u64 < freeze_at && time_u64 < harvest_before && freeze_at < harvest_before, Error::<T>::IllegalTimestamp);
+            ensure!(now < freeze_at && now < harvest_before && freeze_at < harvest_before, Error::<T>::IllegalTimestamp);
             let res = Resource {
                 id: id,
                 price: price,
@@ -137,20 +134,16 @@ decl_module! {
         }
 
         // TODO weight to fee
-        // TODO reference Balance
         #[weight = 100]
         pub fn adopt(origin, owner: T::AccountId, resource_id: ResourceId) -> dispatch::DispatchResult {
             let adopter = ensure_signed(origin)?;
             ensure!(Resources::<T>::contains_key(&owner, &resource_id), Error::<T>::ResourceNotExist);
             ensure!(!Contracts::<T>::contains_key(&owner, &resource_id), Error::<T>::ResourceAdopted);
+            ensure!(owner != adopter, Error::<T>::IllegalAdopter);
             let (_, res) = Resources::<T>::get(&owner, &resource_id);
             let now = <timestamp::Module<T>>::get();
-            // TODO
-            // let time_u64 = TryInto::<u64>::try_into(now).map_err(|_| "timestamp overflow")?;
-            // ensure!(time_u64 < res.freeze_at, Error::<T>::ResourceFreezed);
-            // let amount = BalanceOf::<T>::from(res.price.try_into().expect("balance overflow"));
+            ensure!(now < res.freeze_at, Error::<T>::ResourceFreezed);
             <balances::Module<T> as Currency<_>>::transfer(&adopter, &owner, res.price, AllowDeath)?;
-            // T::Currency::transfer(&adopter, &owner, res.price, AllowDeath)?;
             let contract = Contract::<T::AccountId, T::Moment> {
                 adopter: adopter.clone(),
                 start_at: now,
