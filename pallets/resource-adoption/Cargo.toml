@@ -25,7 +25,7 @@ sp-runtime = { version = '2.0.0-alpha.8', default-features = false }
 sp-std = { version = '2.0.0-alpha.8', default-features = false }
 safe-mix = { version = "1.0.0", default-features = false }
 timestamp = { package = 'pallet-timestamp', version = '2.0.0-alpha.8', default-features = false }
-
+balances = { package = 'pallet-balances', version = '2.0.0-alpha.8', default-features = false }
 
 [dev-dependencies]
 sp-core = { version = '2.0.0-alpha.8', default-features = false }

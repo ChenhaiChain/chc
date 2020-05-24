@@ -4,23 +4,28 @@ use frame_support::codec::{Decode, Encode};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
     storage::{StorageDoubleMap, StorageMap},
+    traits::{Currency, ExistenceRequirement::AllowDeath},
 };
 use frame_system::{self as system, ensure_signed};
-use sp_std::{convert::TryInto, prelude::*};
+use sp_std::{
+    convert::{From, TryInto},
+    prelude::*,
+};
 
-pub trait Trait: system::Trait + timestamp::Trait {
+pub trait Trait: system::Trait + timestamp::Trait + balances::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    // type Currency: Currency<Self::AccountId>;
 }
-
+// type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 type ResourceId = Vec<u8>;
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
-pub struct Resource {
+pub struct Resource<B, M> {
     pub id: ResourceId,
-    pub freeze_at: u64,
-    pub harvest_before: u64,
-    pub price: u128,
+    pub freeze_at: M,
+    pub harvest_before: M,
+    pub price: B,
     pub min_output_kg: u16,
     pub info: Vec<u8>,
     // pub photo_url: Vec<u8>,
@@ -32,10 +37,10 @@ pub struct Resource {
 }
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
-pub struct Contract<K> {
+pub struct Contract<K, M> {
     pub adopter: K,
-    pub start_at: u64,
-    pub end_at: u64,
+    pub start_at: M,
+    pub end_at: M,
 }
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
@@ -48,12 +53,12 @@ decl_storage! {
       Resources get(fn retrieve_resource): double_map
         hasher(blake2_128_concat) T::AccountId,
         hasher(blake2_128_concat) ResourceId
-      => (T::BlockNumber, Resource);
+      => (T::BlockNumber, Resource<T::Balance, T::Moment>);
 
       Contracts get(fn retrieve_contract): double_map
         hasher(blake2_128_concat) T::AccountId,
         hasher(blake2_128_concat) ResourceId
-      => (T::BlockNumber, Contract<T::AccountId>);
+      => (T::BlockNumber, Contract<T::AccountId, T::Moment>);
 
       Events get(fn retrieve_events): double_map
         hasher(blake2_128_concat) T::AccountId,
@@ -93,17 +98,19 @@ decl_module! {
         #[weight = 100]
         pub fn publish_resource(origin,
                                 id: ResourceId,
-                                price: u128,
+                                price: T::Balance,
                                 min_output_kg: u16,
-                                freeze_at: u64,
-                                harvest_before: u64,
+                                freeze_at: T::Moment,
+                                harvest_before: T::Moment,
                                 info: Vec<u8>)
                                 -> dispatch::DispatchResult {
             let publisher = ensure_signed(origin)?;
             ensure!(!Resources::<T>::contains_key(&publisher, &id), Error::<T>::ResourceAlreadyExist);
             let now = <timestamp::Module<T>>::get();
-            let time_u64 = TryInto::<u64>::try_into(now).map_err(|_| "timestamp overflow")?;
-            ensure!(time_u64 < freeze_at && time_u64 < harvest_before && freeze_at < harvest_before, Error::<T>::IllegalTimestamp);
+
+            // TODO
+            // let time_u64 = TryInto::<u64>::try_into(now).map_err(|_| "timestamp overflow")?;
+            // ensure!(time_u64 < freeze_at && time_u64 < harvest_before && freeze_at < harvest_before, Error::<T>::IllegalTimestamp);
             let res = Resource {
                 id: id,
                 price: price,
@@ -136,14 +143,17 @@ decl_module! {
             let adopter = ensure_signed(origin)?;
             ensure!(Resources::<T>::contains_key(&owner, &resource_id), Error::<T>::ResourceNotExist);
             ensure!(!Contracts::<T>::contains_key(&owner, &resource_id), Error::<T>::ResourceAdopted);
-            //ensure! balance
             let (_, res) = Resources::<T>::get(&owner, &resource_id);
             let now = <timestamp::Module<T>>::get();
-            let time_u64 = TryInto::<u64>::try_into(now).map_err(|_| "timestamp overflow")?;
-            ensure!(time_u64 < res.freeze_at, Error::<T>::ResourceFreezed);
-            let contract = Contract::<T::AccountId> {
+            // TODO
+            // let time_u64 = TryInto::<u64>::try_into(now).map_err(|_| "timestamp overflow")?;
+            // ensure!(time_u64 < res.freeze_at, Error::<T>::ResourceFreezed);
+            // let amount = BalanceOf::<T>::from(res.price.try_into().expect("balance overflow"));
+            <balances::Module<T> as Currency<_>>::transfer(&adopter, &owner, res.price, AllowDeath)?;
+            // T::Currency::transfer(&adopter, &owner, res.price, AllowDeath)?;
+            let contract = Contract::<T::AccountId, T::Moment> {
                 adopter: adopter.clone(),
-                start_at: time_u64,
+                start_at: now,
                 end_at: res.harvest_before,
             };
             let current_block = <system::Module<T>>::block_number();

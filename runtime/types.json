@@ -3,9 +3,15 @@
   "LookupSource": "AccountId",
   "Resource": {
     "id": "Bytes",
-    "price": "u128",
+    "price": "Balance",
     "min_output_kg": "u16",
-    "freeze_at": "u64",
+    "freeze_at": "Moment",
     "info": "Bytes"
+  },
+  "ResourceId": "Vec<u8>",
+  "Contract": {
+    "adopter": "AccountId",
+    "start_at": "Moment",
+    "end_at": "Moment"
   }
 }
